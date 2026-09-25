@@ -1,0 +1,34 @@
+{
+  "toolbox_root": "C:/path/to/your/tools",
+  "categories": [
+    {"id": "research", "name": "Research", "icon": "file", "description": "Research and reference tools"}
+  ],
+  "tools": [
+    {
+      "id": "example-tool",
+      "name": "Example Tool",
+      "category": "research",
+      "description": "Replace this example with one of your local tools.",
+      "path": "C:/path/to/tool",
+      "launch": "C:/path/to/tool/start.cmd",
+      "url": "http://127.0.0.1:9000",
+      "icon": "code",
+      "color": "#789bbf",
+      "tags": ["example"],
+      "featured": false,
+      "expected_title": "Example Tool",
+      "guide": {
+        "purpose": "What the tool is for",
+        "features": ["Main capability"],
+        "inputs": "Inputs",
+        "outputs": "Outputs",
+        "requirements": ["Local prerequisites"],
+        "steps": ["How to use it"],
+        "limitations": ["Known limits"],
+        "readme": "C:/path/to/tool/README.md",
+        "agent_readme": "C:/path/to/tool/AGENT_GUIDE.md"
+      },
+      "open_mode": "folder"
+    }
+  ]
+}

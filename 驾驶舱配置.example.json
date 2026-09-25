@@ -1,0 +1,6 @@
+{
+  "roots": ["./workspaces/project-a", "./workspaces/project-b"],
+  "port": 8766,
+  "max_file_mb": 2.0,
+  "stalled_days": 10
+}

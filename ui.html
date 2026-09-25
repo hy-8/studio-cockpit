@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工具箱 · 工作室驾驶舱</title>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --text: #1d1d1f; --dim: #6e6e73; --faint: #a1a1a6;
+    --acc: #0071e3; --acc-deep: #0060c9;
+    --ok: #34a853; --warn: #d97706; --bad: #e0244f;
+    --glass: rgba(255,255,255,0.58);
+    --glass-strong: rgba(255,255,255,0.78);
+    --glass-border: rgba(255,255,255,0.75);
+    --glass-hover: rgba(255,255,255,0.85);
+    --hairline: rgba(0,0,0,0.07);
+    --shadow-sm: 0 2px 10px rgba(20,24,60,.05);
+    --shadow-md: 0 8px 28px rgba(20,24,60,.08);
+    --shadow-lg: 0 18px 50px rgba(20,24,60,.14);
+    --r-lg: 20px; --r-md: 14px; --r-sm: 10px;
+    --ease-spring: cubic-bezier(.32,.72,0,1);
+    --ease-out: cubic-bezier(.22,1,.36,1);
+  }
+  [data-theme="dark"] {
+    --bg: #0d0f14;
+    --text: #eef1f6; --dim: #9aa3b2; --faint: #6b7280;
+    --acc: #6cb0ff; --acc-deep: #4a97f0;
+    --glass: rgba(24,28,38,0.55);
+    --glass-strong: rgba(28,33,44,0.8);
+    --glass-border: rgba(255,255,255,0.1);
+    --glass-hover: rgba(38,44,58,0.75);
+    --hairline: rgba(255,255,255,0.08);
+    --shadow-sm: 0 2px 10px rgba(0,0,0,.3);
+    --shadow-md: 0 8px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 18px 50px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+  html { scrollbar-gutter: stable; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.65 -apple-system, "SF Pro Text", "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background .5s;
+  }
+  a { color: var(--acc); text-decoration: none; }
+
+  /* ---------- 粒子背景 ---------- */
+  #fx { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(900px 600px at 12% 8%, rgba(0,113,227,.07), transparent 60%),
+      radial-gradient(800px 560px at 88% 14%, rgba(191,90,242,.07), transparent 60%),
+      radial-gradient(700px 520px at 78% 90%, rgba(255,55,95,.05), transparent 60%),
+      radial-gradient(640px 480px at 18% 88%, rgba(52,199,89,.05), transparent 60%);
+  }
+
+  /* ---------- 布局 ---------- */
+  .shell { position: relative; z-index: 1; display: flex; min-height: 100vh; }
+  aside {
+    position: sticky; top: 0; height: 100vh; width: 228px; flex: none;
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 22px 14px 16px;
+    background: var(--glass);
+    backdrop-filter: blur(28px) saturate(1.8); -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    border-right: 1px solid var(--hairline);
+  }
+  main { flex: 1; min-width: 0; padding: 26px 32px 70px; max-width: 1210px; }
+
+  .brand { display: flex; align-items: center; gap: 10px; padding: 2px 10px 16px; font-weight: 700; font-size: 15px; }
+  .brand .logo {
+    width: 34px; height: 34px; border-radius: 11px; flex: none;
+    background: linear-gradient(135deg, #0071e3, #9048ff);
+    display: grid; place-items: center; font-size: 16px;
+    box-shadow: 0 6px 16px rgba(0,113,227,.35);
+  }
+  .brand .bt { background: linear-gradient(90deg, #1d1d1f, #4a5a78); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  [data-theme="dark"] .brand .bt { background: linear-gradient(90deg,#fff,#9db4d8); -webkit-background-clip: text; background-clip: text; }
+
+  .nav-label { font-size: 11px; color: var(--faint); padding: 12px 12px 6px; letter-spacing: 1px; font-weight: 600; }
+  nav { display: flex; flex-direction: column; gap: 2px; }
+  nav button {
+    display: flex; align-items: center; gap: 11px;
+    background: none; border: none; color: var(--dim); text-align: left;
+    padding: 9px 12px; font-size: 13.5px; font-weight: 550; border-radius: var(--r-sm);
+    cursor: pointer; transition: all .22s var(--ease-out); position: relative;
+  }
+  nav button .ni { width: 20px; text-align: center; font-size: 15px; transition: transform .25s var(--ease-spring); }
+  nav button:hover { color: var(--text); background: rgba(127,127,127,.08); }
+  nav button:hover .ni { transform: scale(1.18); }
+  nav button.on {
+    color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 22%, transparent);
+  }
+  nav button.on .ni { transform: scale(1.1); }
+
+  .side-links { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
+  .side-links a {
+    display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 12.5px;
+    padding: 7px 12px; border-radius: var(--r-sm); transition: all .2s var(--ease-out);
+  }
+  .side-links a:hover { color: var(--acc); background: color-mix(in srgb, var(--acc) 9%, transparent); transform: translateX(2px); }
+  .side-foot { display: flex; gap: 8px; padding: 12px 2px 0; border-top: 1px solid var(--hairline); margin-top: 10px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    background: var(--glass-strong); color: var(--text);
+    border: 1px solid var(--glass-border); border-radius: var(--r-sm);
+    padding: 7px 13px; cursor: pointer; font-size: 12.5px; font-weight: 550;
+    backdrop-filter: blur(16px) saturate(1.6); -webkit-backdrop-filter: blur(16px) saturate(1.6);
+    box-shadow: var(--shadow-sm);
+    transition: transform .18s var(--ease-spring), box-shadow .22s, border-color .22s, color .22s, background .22s;
+    user-select: none;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); border-color: color-mix(in srgb, var(--acc) 45%, var(--glass-border)); color: var(--acc); }
+  .btn:active { transform: scale(.96); }
+  .btn:disabled { opacity: .55; cursor: default; transform: none; }
+  .btn.primary { background: linear-gradient(180deg, var(--acc), var(--acc-deep)); border: none; color: #fff; box-shadow: 0 6px 18px rgba(0,113,227,.35); }
+  .btn.primary:hover { color: #fff; box-shadow: 0 10px 26px rgba(0,113,227,.45); }
+  .btn.wide { width: 100%; }
+  .spin { width: 12px; height: 12px; border: 2px solid var(--acc); border-top-color: transparent; border-radius: 50%; animation: rot .8s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+
+  /* ---------- 玻璃卡片与通用 ---------- */
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(22px) saturate(1.7); -webkit-backdrop-filter: blur(22px) saturate(1.7);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  .sec-title { display: flex; align-items: baseline; gap: 10px; margin: 30px 0 13px; font-size: 13.5px; font-weight: 700; color: var(--text); }
+  .sec-title .sub { color: var(--faint); font-size: 12px; font-weight: 500; }
+  .muted { color: var(--dim); font-size: 12.5px; }
+  .tabpane { display: none; }
+  .tabpane.on { display: block; }
+  .anim { animation: fadeUp .55s var(--ease-out) both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes popIn { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+
+  /* ---------- 总览 ---------- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 13px; }
+  .stat { padding: 17px 19px; transition: transform .25s var(--ease-spring), box-shadow .3s; position: relative; overflow: hidden; }
+  .stat::after {
+    content: ""; position: absolute; inset: auto -30% -60% auto; width: 130px; height: 130px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,113,227,.09), transparent 70%); opacity: 0; transition: opacity .35s;
+  }
+  .stat:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .stat:hover::after { opacity: 1; }
+  .stat .n { font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .stat .t { color: var(--dim); font-size: 12.5px; margin-top: 3px; }
+  .stat.click { cursor: pointer; }
+
+  .grid2 { display: grid; grid-template-columns: 1.65fr 1fr; gap: 15px; align-items: start; }
+  @media (max-width: 1060px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .chart { display: flex; align-items: flex-end; gap: 7px; height: 168px; padding: 20px 14px 10px; }
+  .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; min-width: 0; }
+  .col .cnt { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .col .bar {
+    width: 100%; max-width: 36px; height: 2px; border-radius: 8px 8px 4px 4px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 80%, white 20%), color-mix(in srgb, var(--acc) 55%, white 45%));
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--acc) 28%, transparent);
+    transition: height .8s var(--ease-out), filter .2s;
+  }
+  .col:hover .bar { filter: brightness(1.12) saturate(1.2); }
+  .col .d { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
+  .col.today .d { color: var(--acc); font-weight: 700; }
+  .col.today .bar { background: linear-gradient(180deg, #ff6482, #9048ff); box-shadow: 0 4px 16px rgba(144,72,255,.4); }
+
+  .rows { display: flex; flex-direction: column; }
+  .row {
+    display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: var(--r-sm);
+    cursor: pointer; border: 1px solid transparent;
+    transition: background .2s, border-color .2s, transform .22s var(--ease-spring);
+  }
+  .row:hover { background: var(--glass-hover); border-color: var(--glass-border); transform: translateX(3px); }
+  .row:active { transform: scale(.985); }
+  .row .ico { font-size: 15px; width: 22px; text-align: center; flex: none; }
+  .row .main { flex: 1; min-width: 0; }
+  .row .t1 { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .t2 { font-size: 12px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .when { color: var(--faint); font-size: 12px; flex: none; font-variant-numeric: tabular-nums; }
+  .pill { flex: none; font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 650; }
+  .pill.done { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, transparent); }
+  .pill.pending { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+  .pill.stalled { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+
+  /* ---------- 项目 ---------- */
+  .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 16px; }
+  .chip {
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 999px;
+    padding: 6px 15px; cursor: pointer; font-size: 12.5px; color: var(--dim); font-weight: 550;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-sm); transition: all .22s var(--ease-out);
+  }
+  .chip:hover { transform: translateY(-1px); color: var(--text); }
+  .chip.on { background: color-mix(in srgb, var(--acc) 13%, transparent); border-color: color-mix(in srgb, var(--acc) 45%, transparent); color: var(--acc); box-shadow: 0 4px 14px color-mix(in srgb, var(--acc) 20%, transparent); }
+  input[type=text], .searchbar input {
+    background: var(--glass); color: var(--text); border: 1px solid var(--glass-border);
+    border-radius: var(--r-md); padding: 9px 14px; font-size: 13.5px; outline: none;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-sm); transition: border-color .25s, box-shadow .25s;
+  }
+  input[type=text]:focus, .searchbar input:focus { border-color: var(--acc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--acc) 15%, transparent); }
+  .pcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(288px, 1fr)); gap: 13px; }
+  .pcard { padding: 16px 18px; cursor: pointer; transition: transform .25s var(--ease-spring), box-shadow .3s, border-color .25s; }
+  .pcard:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--acc) 35%, var(--glass-border)); }
+  .pcard .pn { font-weight: 700; font-size: 13.5px; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pcard .pm { display: flex; gap: 12px; color: var(--dim); font-size: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  .pcard .todo { font-size: 12px; color: var(--dim); background: rgba(127,127,127,.08); border-radius: 7px; padding: 4px 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ---------- 搜索 ---------- */
+  .searchbar { display: flex; gap: 10px; margin: 4px 0 8px; }
+  .searchbar input { flex: 1; max-width: 620px; font-size: 14px; padding: 11px 16px; }
+  mark { background: color-mix(in srgb, #ffd60a 38%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+  /* ---------- 知识库 ---------- */
+  .kgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .kcard { padding: 14px 16px; cursor: pointer; transition: transform .25s var(--ease-spring), box-shadow .3s, border-color .25s; animation: popIn .5s var(--ease-out) both; }
+  .kcard:hover { transform: translateY(-3px) scale(1.01); box-shadow: var(--shadow-md); border-color: color-mix(in srgb, var(--acc) 35%, var(--glass-border)); }
+  .kcard .kt { font-weight: 650; font-size: 13.5px; margin-bottom: 3px; }
+  .kcard .kp { font-size: 12px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ---------- 抽屉 ---------- */
+  #drawer {
+    position: fixed; top: 12px; right: 12px; bottom: 12px; width: min(700px, calc(100vw - 260px));
+    border-radius: 24px; z-index: 40; display: flex; flex-direction: column;
+    background: var(--glass-strong);
+    backdrop-filter: blur(44px) saturate(1.9); -webkit-backdrop-filter: blur(44px) saturate(1.9);
+    border: 1px solid var(--glass-border); box-shadow: var(--shadow-lg);
+    transform: translateX(calc(100% + 40px));
+    transition: transform .45s var(--ease-spring);
+  }
+  #drawer.open { transform: none; }
+  #drawer .dhead { padding: 16px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--hairline); }
+  #drawer .dhead .dt { flex: 1; font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #drawer .dbody { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  #drawer pre { white-space: pre-wrap; word-break: break-word; font: 12.5px/1.75 Consolas, "Microsoft YaHei", monospace; }
+  .dclose { background: rgba(127,127,127,.1); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 13px; cursor: pointer; color: var(--dim); transition: all .2s; flex: none; }
+  .dclose:hover { background: color-mix(in srgb, var(--bad) 15%, transparent); color: var(--bad); transform: rotate(90deg); }
+  .drawer-actions { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+
+  /* ---------- 其他 ---------- */
+  #toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(18px);
+    background: var(--glass-strong); color: var(--text); border: 1px solid var(--glass-border);
+    backdrop-filter: blur(30px) saturate(1.8); -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    border-radius: 999px; padding: 10px 22px; box-shadow: var(--shadow-lg);
+    display: none; z-index: 60; max-width: 78vw; font-size: 13px;
+    opacity: 0; transition: all .4s var(--ease-spring);
+  }
+  #toast.show { display: block; opacity: 1; transform: translateX(-50%) translateY(0); }
+  .empty { text-align: center; color: var(--faint); padding: 36px 0; }
+  .skel { color: var(--faint); padding: 22px 0; }
+  .shimmer { background: linear-gradient(90deg, rgba(127,127,127,.06) 25%, rgba(127,127,127,.14) 37%, rgba(127,127,127,.06) 63%); background-size: 400% 100%; animation: shim 1.2s infinite; border-radius: 8px; }
+  @keyframes shim { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+  table.sec { width: 100%; border-collapse: collapse; }
+  table.sec th { text-align: left; padding: 8px 10px; font-size: 12px; color: var(--faint); font-weight: 600; }
+  table.sec td { padding: 7px 10px; border-top: 1px solid var(--hairline); font-size: 13px; }
+  code.mono { font-family: Consolas, monospace; font-size: 12px; background: rgba(127,127,127,.1); border-radius: 5px; padding: 1px 6px; }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: rgba(127,127,127,.28); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(127,127,127,.5); background-clip: content-box; }
+
+  @media (max-width: 860px) {
+    .shell { flex-direction: column; }
+    aside { position: static; height: auto; width: auto; flex-direction: row; align-items: center; padding: 10px 14px; gap: 8px; overflow-x: auto; }
+    .brand { padding: 0 6px; } .brand .bt { display: none; }
+    .nav-label, .side-links { display: none; }
+    nav { flex-direction: row; }
+    nav button span.lbl { display: none; }
+    main { padding: 18px 16px 60px; }
+    #drawer { width: calc(100vw - 24px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+<link rel="stylesheet" href="/toolbox.css">
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><div class="aurora-orb orb-one"></div><div class="aurora-orb orb-two"></div><div class="aurora-orb orb-three"></div><div class="aurora-ribbon"></div></div>
+<div class="shell">
+  <aside>
+    <div class="brand"><span class="logo" data-icon="box"></span><span class="bt">我的工具箱<small>STUDIO / PERSONAL</small></span></div>
+    <div class="nav-label">你的工具空间</div>
+    <nav id="nav">
+      <button data-tab="toolbox" data-view="all" class="on" title="全部工具"><span class="ni" data-icon="grid"></span><span class="lbl">全部工具</span><span class="nav-count" id="tool-nav-count">—</span></button>
+      <button data-tab="toolbox" data-view="favorites" title="我的收藏"><span class="ni" data-icon="star"></span><span class="lbl">我的收藏</span></button>
+      <button data-tab="toolbox" data-view="recent" title="最近使用"><span class="ni" data-icon="clock"></span><span class="lbl">最近使用</span></button>
+      <div class="nav-label workspace-label">工作室驾驶舱</div>
+      <button data-tab="overview" title="工作总览"><span class="ni" data-icon="activity"></span><span class="lbl">工作总览</span></button>
+      <button data-tab="projects" title="项目空间"><span class="ni" data-icon="folder"></span><span class="lbl">项目空间</span></button>
+      <button data-tab="search" title="文档搜索"><span class="ni" data-icon="search"></span><span class="lbl">文档搜索</span></button>
+      <button data-tab="knowledge" title="知识库"><span class="ni" data-icon="book"></span><span class="lbl">知识库</span></button>
+      <button data-tab="security" title="安全检查"><span class="ni" data-icon="shield"></span><span class="lbl">安全检查</span></button>
+    </nav>
+    <div class="side-links">
+      <div class="storage-card"><span class="storage-icon" data-icon="drive"></span><div><strong>灵感在云端，工具在身边。</strong><small>本地工作空间 · 随时开始</small></div><span class="online-dot"></span></div>
+    </div>
+    <div class="side-foot">
+      <button class="btn wide" id="rescanBtn" title="重新扫描工作区与工具箱（约 1-2 分钟）"><span>⟳</span>重建索引</button>
+      <button class="btn" id="themeBtn" title="切换深浅色" style="flex:none">🌙</button>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar"><div class="breadcrumb">我的工作空间 <span>/</span> <strong id="page-label">工具箱</strong></div><div class="topbar-actions"><span class="local-badge"><i></i> 本地运行</span><button class="icon-button" id="motionBtn" title="暂停动态效果" aria-label="暂停动态效果" data-icon="sparkles"></button><span class="profile-badge">我</span></div></header>
+    <section class="tabpane on" id="tab-toolbox">
+      <div class="welcome">
+        <div class="welcome-copy"><div class="eyebrow"><span></span> A PLACE FOR EVERY POSSIBILITY</div><h1>好工具，<br>井然有序<span class="title-dot">。</span></h1><p>把散落的灵感与创造力，收进你的专属工具箱。<br class="desktop-break">找到工具，轻松开始下一件作品。</p><div class="welcome-actions"><button class="btn primary folder-open" id="openToolbox"><span data-icon="folder"></span>打开工具箱文件夹<span data-icon="arrow-up-right"></span></button><span class="hero-count" id="hero-count">正在整理你的工具…</span></div></div>
+        <div class="glass-art" aria-hidden="true"><div class="art-halo"></div><div class="art-orbit orbit-a"></div><div class="art-orbit orbit-b"></div><div class="art-bubble bubble-a"></div><div class="art-bubble bubble-b"></div><div class="art-folder"><div class="folder-back"></div><div class="folder-sheet sheet-a"></div><div class="folder-sheet sheet-b"></div><div class="folder-front"><span data-icon="sparkles"></span><div class="folder-reflection"></div></div></div><div class="floating-tile tile-play" data-icon="play"></div><div class="floating-tile tile-code" data-icon="code"></div><div class="floating-tile tile-wand" data-icon="wand"></div><span class="art-caption">MAKE ROOM FOR GREAT IDEAS</span></div>
+      </div>
+      <div class="tool-section-heading"><div><h2 id="tools-title">为创造，准备就绪。<span id="tools-count"></span></h2><p id="tools-subtitle">熟悉的工具，全新的秩序。</p></div><div class="tool-view-switch" role="group" aria-label="显示方式"><button class="on" data-layout="grid" title="卡片视图" aria-label="卡片视图" aria-pressed="true" data-icon="grid"></button><button data-layout="list" title="列表视图" aria-label="列表视图" aria-pressed="false" data-icon="list"></button></div></div>
+      <div class="tool-controls"><div id="tool-categories" class="tool-categories" aria-label="工具分类"></div><label class="tool-search"><span data-icon="search"></span><input type="search" id="tool-search" placeholder="搜索工具、用途…" aria-label="搜索工具、用途"><kbd>Ctrl K</kbd></label></div>
+      <p class="tool-state-note">打开或刷新只检查状态；点击启动或打开按钮才会执行操作。点击工具名称或 ⓘ 查看用途与用法。</p>
+      <div class="tool-grid" id="tool-grid" aria-live="polite"><div class="tool-loading glass">正在打开工具箱…</div></div>
+      <footer class="tool-footer"><span><i class="online-dot"></i><span id="tool-location">E:\工具箱</span><span class="footer-divider">/</span>每个工具，都有自己的位置。</span><button id="refreshTools"><span data-icon="refresh"></span>刷新状态</button></footer>
+    </section>
+    <!-- 总览 -->
+    <section class="tabpane" id="tab-overview">
+      <div class="stats" id="stats"></div>
+      <div class="grid2" style="margin-top:16px">
+        <div>
+          <div class="sec-title" style="margin-top:14px">产出节奏<span class="sub">最近 14 天 · 点击柱子查看当天</span></div>
+          <div class="glass"><div class="chart" id="chart"></div></div>
+        </div>
+        <div>
+          <div class="sec-title" style="margin-top:14px">⚠️ 停滞项目<span class="sub">待办未清且超 10 天</span></div>
+          <div class="glass" id="stalledBox" style="padding:8px"></div>
+        </div>
+      </div>
+      <div class="sec-title">最新改动</div>
+      <div class="glass" style="padding:8px"><div class="rows" id="latestRows"></div></div>
+    </section>
+
+    <!-- 项目 -->
+    <section class="tabpane" id="tab-projects">
+      <div class="filters">
+        <button class="chip on" data-f="all">全部</button>
+        <button class="chip" data-f="active">🟢 7 天内活跃</button>
+        <button class="chip" data-f="stalled">🔴 停滞</button>
+        <button class="chip" data-f="pending">🟡 有待办</button>
+        <input type="text" id="pfilter" placeholder="过滤项目名…" style="width:210px">
+      </div>
+      <div class="pcards" id="pcards"></div>
+    </section>
+
+    <!-- 搜索 -->
+    <section class="tabpane" id="tab-search">
+      <div class="searchbar">
+        <input type="text" id="q" placeholder="全文搜索：如  倍速 MiniMax / 停滞 / 拆解 （空格分词，全部命中）">
+        <button class="btn primary" id="searchBtn" style="padding:10px 20px;font-size:13.5px">🔍 搜索</button>
+      </div>
+      <div class="muted" style="margin-bottom:16px">范围：工作区与工具箱的文本文件（md / txt / srt / csv / json / 代码），点击结果预览原文</div>
+      <div id="search-results"></div>
+    </section>
+
+    <!-- 知识库 -->
+    <section class="tabpane" id="tab-knowledge">
+      <div class="filters" id="kchips"></div>
+      <div class="kgrid" id="kgrid"></div>
+    </section>
+
+    <!-- 安全 -->
+    <section class="tabpane" id="tab-security">
+      <div class="glass anim" style="padding:18px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <button class="btn primary" id="secBtn" style="padding:9px 18px">🔐 扫描明文密钥</button>
+        <span class="muted">检查规则：sk- 开头的 Key、api_key / secret / token 明文赋值、Bearer 令牌；结果只显示遮蔽片段，不会修改任何文件</span>
+      </div>
+      <div id="sec-results" style="margin-top:15px"></div>
+    </section>
+  </main>
+</div>
+
+<div id="drawer" role="dialog" aria-labelledby="dtitle" aria-hidden="true" inert>
+  <div class="dhead">
+    <div class="dt" id="dtitle"></div>
+    <button class="dclose" id="dclose" aria-label="关闭详情">✕</button>
+  </div>
+  <div class="dbody" id="dbody"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => (s ?? "").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+let OVERVIEW = null, KNOW = null;
+let curTheme = "light";
+try { curTheme = localStorage.getItem("ck-theme") === "dark" ? "dark" : "light"; } catch {}
+
+const ICONS = {".md":"📝",".txt":"📄",".srt":"💬",".vtt":"💬",".csv":"📊",".json":"🧾",".py":"🐍",".mjs":"⚙️"};
+const ico = e => ICONS[e.ext] || "📄";
+const ROOT_ICON = {"aiproduct":"🧪","工作流":"🔁","视频":"🎬","工具箱":"🧰"};
+
+async function api(path, opt) { const r = await fetch(path, opt); return r.json(); }
+function toast(msg, ms = 2800) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), ms);
+}
+function relTime(ts) {
+  const s = Date.now()/1000 - ts;
+  if (s < 3600) return Math.max(1, Math.round(s/60)) + " 分钟前";
+  if (s < 86400) return Math.round(s/3600) + " 小时前";
+  const d = Math.round(s/86400);
+  return d === 1 ? "昨天" : d + " 天前";
+}
+function fmtScan(ts) { return ts ? new Date(ts*1000).toLocaleString("zh-CN",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "未建立"; }
+function hl(text, terms) {
+  let h = esc(text);
+  for (const t of terms) if (t) h = h.replace(new RegExp("(" + t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + ")","gi"),"<mark>$1</mark>");
+  return h;
+}
+function stagger(i) { return ` style="animation-delay:${Math.min(i,12)*35}ms"`; }
+function countUp(el, val) {
+  if (document.documentElement.dataset.motion === "off" || matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = val; return; }
+  if (!Number.isFinite(val)) { el.textContent = val; return; }
+  const t0 = performance.now(), dur = 850;
+  (function f(t) {
+    const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(val * e);
+    if (p < 1) requestAnimationFrame(f);
+  })(t0);
+}
+
+/* ================= 主题 ================= */
+function applyTheme() {
+  document.documentElement.dataset.theme = curTheme;
+  $("themeBtn").textContent = curTheme === "dark" ? "☀️" : "🌙";
+}
+$("themeBtn").onclick = () => {
+  curTheme = curTheme === "dark" ? "light" : "dark";
+  try { localStorage.setItem("ck-theme", curTheme); } catch {}
+  applyTheme();
+};
+applyTheme();
+
+/* ================= 目录切换 ================= */
+$("nav").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  document.querySelectorAll("#nav button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".tabpane").forEach(p => p.classList.toggle("on", p.id === "tab-" + b.dataset.tab));
+  if (b.dataset.tab === "overview") loadOverview(true);
+  if (b.dataset.tab === "projects") renderProjects();
+  if (b.dataset.tab === "knowledge") loadKnowledge();
+});
+
+/* ================= 抽屉 ================= */
+let drawerOpener = null;
+function openDrawer(title, bodyHTML) {
+  if (!$("drawer").classList.contains("open")) drawerOpener = document.activeElement;
+  $("dtitle").innerHTML = title; $("dbody").innerHTML = bodyHTML;
+  $("drawer").inert = false; $("drawer").removeAttribute("aria-hidden");
+  $("drawer").classList.add("open"); $("dbody").scrollTop = 0;
+  $("dclose").focus({preventScroll:true});
+}
+function closeDrawer() {
+  if (!$("drawer").classList.contains("open")) return;
+  $("drawer").classList.remove("open");
+  const target = drawerOpener?.isConnected ? drawerOpener : $("tool-search");
+  target?.focus({preventScroll:true});
+  $("drawer").inert = true; $("drawer").setAttribute("aria-hidden", "true");
+}
+$("dclose").onclick = closeDrawer;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+
+/* ================= 全局事件委托 ================= */
+document.addEventListener("click", e => {
+  const f = e.target.closest("[data-act]"); if (!f) return;
+  const act = f.dataset.act, v = f.dataset.v || "";
+  if (act === "preview") openPreview(v);
+  if (act === "project") openProject(v);
+  if (act === "day") openDay(v);
+  if (act === "pack") genPack(v);
+  if (act === "openfolder") openFolder(v);
+  if (act === "copypath") navigator.clipboard.writeText(v).then(() => toast("路径已复制"));
+});
+
+/* ================= 总览 ================= */
+async function loadOverview(force) {
+  if (force || !OVERVIEW) OVERVIEW = await api("/api/overview");
+  OVERVIEW._recent = await api("/api/recent?days=14");
+  const o = OVERVIEW, r = o._recent;
+  const stalled = o.projects.filter(p => p.stalled);
+  const act7 = o.projects.filter(p => p.age_days <= 7);
+  const today = new Date().toLocaleDateString("sv-SE");
+  const todayFiles = (r.days || []).find(d => d.date === today)?.files ?? 0;
+
+  const cards = [
+    [todayFiles, "今天触及的文件", "var(--text)"],
+    [act7.length, "7 天内活跃项目", "var(--acc)"],
+    [stalled.length, "停滞项目", stalled.length ? "var(--bad)" : "var(--ok)"],
+    [o.projects.length, "项目总数", "var(--text)"],
+    [o.total, "索引文件总量", "var(--text)"],
+  ];
+  $("stats").innerHTML = cards.map((c, i) => `
+    <div class="glass stat anim"${stagger(i)}><div class="n" style="color:${c[2]}">0</div><div class="t">${c[1]}</div></div>`).join("");
+  $("stats").querySelectorAll(".stat .n").forEach((el, i) => countUp(el, cards[i][0]));
+  $("stats").children[1].style.cursor = "pointer";
+  $("stats").children[1].onclick = () => { document.querySelector('#nav button[data-tab="projects"]').click(); document.querySelector('.chip[data-f="active"]').click(); };
+  $("stats").children[2].style.cursor = "pointer";
+  $("stats").children[2].onclick = () => { document.querySelector('#nav button[data-tab="projects"]').click(); document.querySelector('.chip[data-f="stalled"]').click(); };
+
+  const max = Math.max(...r.days.map(d => d.files), 1);
+  $("chart").innerHTML = r.days.slice().reverse().map(d => `
+    <div class="col ${d.date === today ? "today" : ""}" data-act="day" data-v="${d.date}" title="${d.date}：${d.files} 文件">
+      <div class="cnt">${d.files}</div>
+      <div class="bar" data-h="${Math.max(4, Math.round(d.files / max * 108))}"></div>
+      <div class="d">${d.date.slice(5)}</div>
+    </div>`).join("");
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    $("chart").querySelectorAll(".bar").forEach((b, i) => setTimeout(() => b.style.height = b.dataset.h + "px", i * 45));
+  }));
+
+  $("stalledBox").innerHTML = stalled.length ? stalled.slice(0, 7).map((p, i) => `
+    <div class="row anim"${stagger(i)} data-act="project" data-v="${esc(p.project)}">
+      <div class="ico">📁</div>
+      <div class="main"><div class="t1">${esc(p.project)}</div><div class="t2">${esc(p.pending[0] || "")}</div></div>
+      <span class="pill stalled">${Math.round(p.age_days)} 天未动</span>
+    </div>`).join("") : `<div class="empty">✓ 没有停滞项目，节奏很好</div>`;
+
+  $("latestRows").innerHTML = r.latest.slice(0, 18).map((e, i) => `
+    <div class="row anim"${stagger(i)} data-act="preview" data-v="${esc(e.path)}">
+      <div class="ico">${ico(e)}</div>
+      <div class="main"><div class="t1">${esc(e.title)}</div><div class="t2">${esc(e.rel)}</div></div>
+      <span class="when">${relTime(e.mtime)}</span>
+    </div>`).join("");
+}
+
+/* ================= 项目 ================= */
+let projFilter = "all";
+document.querySelectorAll(".chip[data-f]").forEach(c => c.onclick = () => {
+  document.querySelectorAll(".chip[data-f]").forEach(x => x.classList.remove("on"));
+  c.classList.add("on"); projFilter = c.dataset.f; renderProjects();
+});
+$("pfilter").addEventListener("input", renderProjects);
+
+function renderProjects() {
+  if (!OVERVIEW) { loadOverview(true).then(renderProjects); return; }
+  const q = ($("pfilter").value || "").toLowerCase();
+  let list = OVERVIEW.projects;
+  if (projFilter === "active") list = list.filter(p => p.age_days <= 7);
+  if (projFilter === "stalled") list = list.filter(p => p.stalled);
+  if (projFilter === "pending") list = list.filter(p => p.pending.length && !p.stalled);
+  if (q) list = list.filter(p => p.project.toLowerCase().includes(q));
+  $("pcards").innerHTML = list.slice(0, 120).map((p, i) => {
+    const pill = p.stalled ? `<span class="pill stalled">停滞</span>`
+      : p.pending.length ? `<span class="pill pending">进行中</span>`
+      : p.done ? `<span class="pill done">有产出</span>` : "";
+    return `
+    <div class="glass pcard anim"${stagger(i)} data-act="project" data-v="${esc(p.project)}">
+      <div class="pn">${ROOT_ICON[p.root] || "📁"} ${esc(p.project.replace(/^[^/]+\//, ""))}</div>
+      <div class="pm">
+        <span>🕒 ${relTime(p.last_mtime)}</span><span>📄 文档 ${p.docs}</span><span>${pill}</span>
+      </div>
+      ${p.pending.length ? `<div class="todo">待：${esc(p.pending[0])}</div>` : ""}
+      ${p.tag_str ? `<div class="muted" style="margin-top:7px">${esc(p.tag_str)}</div>` : ""}
+    </div>`;
+  }).join("") || `<div class="empty">没有符合条件的项目</div>`;
+}
+
+async function openProject(name) {
+  openDrawer(`📁 ${esc(name)}`, `<div class="skel shimmer" style="height:56px"></div>`);
+  const r = await api("/api/project?name=" + encodeURIComponent(name));
+  const docs = r.items.filter(e => e.is_doc);
+  $("dbody").innerHTML = `
+    <div class="drawer-actions">
+      <button class="btn primary" data-act="pack" data-v="${esc(name)}">📦 生成上下文包</button>
+      <button class="btn" data-act="openfolder" data-v="${esc(docs[0] ? docs[0].path : "")}">📂 打开文件夹</button>
+      <span class="muted" style="align-self:center">共 ${r.items.length} 文件 · 文档 ${docs.length}</span>
+    </div>
+    <div class="rows">` + (docs.length ? docs.map(e => `
+      <div class="row" data-act="preview" data-v="${esc(e.path)}">
+        <div class="ico">${ico(e)}</div>
+        <div class="main"><div class="t1">${esc(e.title)}</div><div class="t2">${esc(e.rel)}</div></div>
+        <span class="when">${relTime(e.mtime)}</span>
+      </div>`).join("") : `<div class="empty">该项目暂无文档</div>`) + `</div>`;
+}
+
+async function openDay(date) {
+  openDrawer(`📅 ${date} 改动的文件`, `<div class="skel shimmer" style="height:56px"></div>`);
+  const r = await api("/api/day?date=" + date);
+  $("dbody").innerHTML = `<div class="muted" style="margin-bottom:10px">共 ${r.total} 个文件${r.items.length < r.total ? "（显示前 " + r.items.length + " 个）" : ""}</div>
+    <div class="rows">` + r.items.map(e => `
+      <div class="row" data-act="preview" data-v="${esc(e.path)}">
+        <div class="ico">${ico(e)}</div>
+        <div class="main"><div class="t1">${esc(e.title)}</div><div class="t2">${esc(e.rel)}</div></div>
+        <span class="when">${new Date(e.mtime*1000).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})}</span>
+      </div>`).join("") + `</div>`;
+}
+
+/* ================= 搜索 ================= */
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+$("searchBtn").onclick = doSearch;
+async function doSearch() {
+  const qstr = $("q").value.trim();
+  if (!qstr) return;
+  $("search-results").innerHTML = `<div class="glass" style="padding:10px 14px">
+    <div class="shimmer" style="height:18px;margin:6px 0"></div><div class="shimmer" style="height:18px;margin:6px 0;width:80%"></div><div class="shimmer" style="height:18px;margin:6px 0;width:60%"></div></div>`;
+  const r = await api("/api/search?q=" + encodeURIComponent(qstr) + "&limit=40");
+  const terms = qstr.split(/\s+/).filter(Boolean);
+  $("search-results").innerHTML = r.results.length ? `
+    <div class="muted" style="margin:4px 0 12px">命中 ${r.results.length} 条</div>
+    <div class="glass" style="padding:8px"><div class="rows">` + r.results.map((e, i) => `
+      <div class="row anim"${stagger(i)} data-act="preview" data-v="${esc(e.path)}">
+        <div class="ico">${ico(e)}</div>
+        <div class="main">
+          <div class="t1">${hl(e.name, terms)}</div>
+          <div class="t2">${hl(e.match, terms)}</div>
+          <div class="t2">${esc(e.rel)} · ${relTime(e.mtime)}</div>
+        </div>
+      </div>`).join("") + `</div></div>` : `<div class="glass"><div class="empty">没有找到「${esc(qstr)}」相关内容</div></div>`;
+}
+
+/* ================= 知识库 ================= */
+async function loadKnowledge() {
+  if (!KNOW) KNOW = await api("/api/knowledge");
+  const cats = Object.entries(KNOW);
+  $("kchips").innerHTML = cats.map(([t, g], i) =>
+    `<button class="chip ${i === 0 ? "on" : ""}" data-k="${t}">${esc(g.label)} ${g.items.length}</button>`).join("");
+  $("kchips").querySelectorAll(".chip").forEach(c => c.onclick = () => {
+    $("kchips").querySelectorAll(".chip").forEach(x => x.classList.remove("on"));
+    c.classList.add("on"); renderKnow(c.dataset.k);
+  });
+  if (cats.length) renderKnow(cats[0][0]);
+}
+function renderKnow(key) {
+  const g = KNOW[key];
+  $("kgrid").innerHTML = g.items.slice(0, 80).map((e, i) => `
+    <div class="glass kcard" style="animation-delay:${Math.min(i,12)*40}ms" data-act="preview" data-v="${esc(e.path)}">
+      <div class="kt">${ico(e)} ${esc(e.title)}</div>
+      <div class="kp">${esc(e.rel)}</div>
+      <div class="kp" style="color:var(--faint)">${relTime(e.mtime)}</div>
+    </div>`).join("") || `<div class="empty">暂无</div>`;
+}
+
+/* ================= 安全 ================= */
+$("secBtn").onclick = async () => {
+  $("sec-results").innerHTML = `<div class="glass" style="padding:20px"><div class="skel">扫描中…（首次需读取较多文件，可能要十几秒）</div></div>`;
+  const r = await api("/api/security");
+  $("sec-results").innerHTML = !r.findings.length
+    ? `<div class="glass anim"><div class="empty">✓ 未发现明文密钥</div></div>`
+    : `<div class="glass anim" style="padding:4px 18px 16px">
+        <div style="color:var(--bad);font-weight:700;padding:12px 0 6px">发现 ${r.findings.length} 处疑似明文密钥 —— 建议移入环境变量并撤销旧密钥</div>
+        <table class="sec"><tr><th>位置</th><th>类型</th><th>内容（已遮蔽）</th></tr>
+        ${r.findings.map(f => `<tr><td class="muted">${esc(f.root)}/${esc(f.rel)}:${f.line}</td><td>${esc(f.type)}</td><td><code class="mono">${esc(f.masked)}</code></td></tr>`).join("")}
+        </table></div>`;
+};
+
+/* ================= 预览 / 上下文包 / 打开文件夹 ================= */
+async function openPreview(path) {
+  openDrawer("📄 预览", `<div class="skel shimmer" style="height:120px"></div>`);
+  const r = await api("/api/file?path=" + encodeURIComponent(path));
+  if (r.error) { $("dbody").innerHTML = `<div class="empty">${esc(r.error)}</div>`; return; }
+  $("dtitle").textContent = path.split("/").pop();
+  $("dbody").innerHTML = `
+    <div class="drawer-actions">
+      <button class="btn" data-act="copypath" data-v="${esc(path)}">📋 复制路径</button>
+      <button class="btn" data-act="openfolder" data-v="${esc(path)}">📂 打开所在文件夹</button>
+    </div>
+    <div class="muted" style="margin-bottom:10px">${esc(path)}</div>
+    <pre>${esc(r.text)}</pre>`;
+}
+async function genPack(project) {
+  toast("正在生成上下文包…");
+  const r = await api("/api/pack", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ project }) });
+  toast(r.path ? "✓ 上下文包已生成：" + r.path : (r.error || "生成失败"), 4200);
+}
+async function openFolder(path) {
+  if (!path) { toast("没有可打开的路径"); return; }
+  const dir = path.replace(/\//g, "\\").replace(/\\[^\\]+$/, "");
+  const r = await api("/api/open", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: dir }) });
+  if (!r.ok) toast(r.error || "打开失败");
+}
+
+/* ================= 重建索引 ================= */
+$("rescanBtn").onclick = async () => {
+  const btn = $("rescanBtn");
+  btn.disabled = true; btn.innerHTML = `<span class="spin"></span>扫描中…`;
+  const before = (OVERVIEW || await api("/api/overview")).last_scan;
+  await api("/api/rescan", { method: "POST" });
+  const timer = setInterval(async () => {
+    const o = await api("/api/overview");
+    if (o.last_scan !== before) {
+      clearInterval(timer); OVERVIEW = null; KNOW = null;
+      btn.disabled = false; btn.innerHTML = `<span>⟳</span>重建索引`;
+      toast("✓ 索引已更新");
+      const on = document.querySelector("#nav button.on").dataset.tab;
+      if (on === "overview") loadOverview(true);
+      if (on === "projects") { await loadOverview(true); renderProjects(); }
+    }
+  }, 2500);
+};
+
+/* ================= 启动 ================= */
+// 工具箱作为首页，文档索引在进入驾驶舱时加载。
+</script>
+<script src="/toolbox.js"></script>
+</body>
+</html>
